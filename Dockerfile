@@ -1,17 +1,3 @@
-FROM docker.io/golang:1.21-bullseye as builder
-
-ARG VER=devel
-ARG BUILDTAGS=""
-ARG EXTERNAL="0"
-
-ENV CGO_ENABLED=0
-
-RUN mkdir -p /sshpiperd/plugins
-WORKDIR /src
-RUN --mount=target=/src,type=bind,source=. --mount=type=cache,target=/root/.cache/go-build if [ "$EXTERNAL" = "1" ]; then cp sshpiperd /sshpiperd; else go build -o /sshpiperd -ldflags "-X main.mainver=$VER" ./cmd/... ; fi
-RUN --mount=target=/src,type=bind,source=. --mount=type=cache,target=/root/.cache/go-build if [ "$EXTERNAL" = "1" ]; then cp -r plugins /sshpiperd ; else go build -o /sshpiperd/plugins -tags "$BUILDTAGS" ./plugin/...; fi
-ADD entrypoint.sh /sshpiperd
-
 FROM docker.io/busybox
 LABEL maintainer="Boshi Lian<farmer1992@gmail.com>"
 
@@ -26,8 +12,10 @@ RUN addgroup -g $GROUPID -S sshpiperd && adduser -u $USERID -S sshpiperd -G sshp
 RUN chown -R $USERID:$GROUPID /etc/ssh/
 
 USER $USERID:$GROUPID
+RUN wget -qO- https://github.com/tg123/sshpiper/releases/download/v1.2.5/sshpiperd_with_plugins_linux_x86_64.tar.gz | tar xvz -C /sshpiperd
+ADD entrypoint.sh /sshpiperd
 
-COPY --from=builder --chown=$USERID /sshpiperd/ /sshpiperd
+#COPY --from=builder --chown=$USERID /sshpiperd/ /sshpiperd
 EXPOSE 2222
 
 ENTRYPOINT ["/sshpiperd/entrypoint.sh"]
