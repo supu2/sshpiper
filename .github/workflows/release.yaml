@@ -66,33 +66,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}          
 
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v5
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          go-version: 'stable'
-          cache: true
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Setup Snap
-        run: |
-          set -e
-          sudo snap install snapcraft --classic  
-          # https://github.com/goreleaser/goreleaser/pull/2117
-          mkdir -p $HOME/.cache/snapcraft/download
-          mkdir -p $HOME/.cache/snapcraft/stage-packages   
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
         with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-        env:
-          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SKIP_PUSH: ${{ github.event_name != 'release' }}
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        
-      - name: Upload binaries to release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: | 
-          awk '{print "dist/"$2}' dist/checksums.txt | xargs gh release upload ${{github.event.release.name}} dist/checksums.txt
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+  
