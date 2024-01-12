@@ -12,7 +12,7 @@ RUN addgroup -g $GROUPID -S sshpiperd && adduser -u $USERID -S sshpiperd -G sshp
 RUN chown -R $USERID:$GROUPID /etc/ssh/
 
 USER $USERID:$GROUPID
-RUN wget -qO- https://github.com/tg123/sshpiper/releases/download/v1.2.5/sshpiperd_with_plugins_linux_x86_64.tar.gz | tar xvz -C /sshpiperd
+RUN mkdir -p /sshpiperd; wget -qO- https://github.com/tg123/sshpiper/releases/download/v1.2.5/sshpiperd_with_plugins_linux_x86_64.tar.gz | tar xvz -C /sshpiperd
 ADD entrypoint.sh /sshpiperd
 
 #COPY --from=builder --chown=$USERID /sshpiperd/ /sshpiperd
